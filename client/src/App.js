@@ -5,7 +5,7 @@ import { generateKeys } from './identity';
 import './App.css';
 
 // Connect to Signaling Server
-const socket = io.connect('https://decent-messenger-production.up.railway.app');
+const socket = io.connect('https://decent-messenger.onrender.com');
 
 function App() {
   const [me, setMe] = useState("");
