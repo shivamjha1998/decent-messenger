@@ -1,0 +1,27 @@
+.App {
+  text-align: center;
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.card {
+  background: #3b404e;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+}
+
+.address-box {
+  font-family: monospace;
+  background: #222;
+  padding: 10px;
+  border-radius: 5px;
+  font-size: 1.5em;
+  letter-spacing: 2px;
+  color: #61dafb;
+}
