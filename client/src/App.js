@@ -1,19 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
 import io from 'socket.io-client';
 import Peer from 'simple-peer';
-import { generateKeys, exportKey } from './identity';
+import { generateKeys } from './identity';
 import './App.css';
 
-// Connect to our Signaling Server
+// Connect to Signaling Server
 const socket = io.connect('http://localhost:5000');
 
 function App() {
-  // Identity State
-  const [myKeys, setMyKeys] = useState(null);
-
-  // Connection State
-  const [me, setMe] = useState(""); // My Socket ID (Phone Number)
-  const [stream, setStream] = useState(null);
+  const [me, setMe] = useState("");
   const [receivingCall, setReceivingCall] = useState(false);
   const [caller, setCaller] = useState("");
   const [callerSignal, setCallerSignal] = useState(null);
@@ -21,21 +16,21 @@ function App() {
   const [idToCall, setIdToCall] = useState("");
   const [connectionStatus, setConnectionStatus] = useState("Disconnected");
 
-  // References (to keep values across renders without re-triggering)
+  // --- Chat State ---
+  const [msgText, setMsgText] = useState("");
+  const [messages, setMessages] = useState([]);
+
   const connectionRef = useRef();
 
   useEffect(() => {
-    // 1. Generate Identity (Phase 1 Logic)
+    // 1. Generate Keys
     async function initIdentity() {
-      const keys = await generateKeys();
-      setMyKeys(keys);
+      await generateKeys();
     }
     initIdentity();
 
-    // 2. Listen for Socket Events (Phase 2 Logic)
-    socket.on("me", (id) => {
-      setMe(id);
-    });
+    // 2. Socket Listeners
+    socket.on("me", (id) => setMe(id));
 
     socket.on("callUser", (data) => {
       setReceivingCall(true);
@@ -44,33 +39,33 @@ function App() {
     });
   }, []);
 
-  // --- ACTIONS ---
+  // --- Helper to append messages ---
+  const addMessage = (text, sender) => {
+    setMessages((prev) => [...prev, { text, sender }]);
+  };
 
-  // A. Initiate Connection (I am calling someone)
+  // --- Initiate Call ---
   const callUser = (id) => {
-    // We are the initiator
     const peer = new Peer({
       initiator: true,
       trickle: false,
-      config: { iceServers: [] } // Local network only for speed/simplicity
+      config: { iceServers: [] }
     });
 
-    // When we generate a "signal" (map), send it to the server
     peer.on("signal", (data) => {
-      socket.emit("callUser", {
-        userToCall: id,
-        signalData: data,
-        from: me
-      });
+      socket.emit("callUser", { userToCall: id, signalData: data, from: me });
     });
 
-    // When the connection opens
     peer.on("connect", () => {
       setConnectionStatus("Connected P2P!");
-      console.log("P2P Channel Established!");
     });
 
-    // Listen for answer
+    // --- Listen for Data (Chat Messages) ---
+    peer.on("data", (data) => {
+      const str = new TextDecoder("utf-8").decode(data);
+      addMessage(str, "Partner");
+    });
+
     socket.on("callAccepted", (signal) => {
       setCallAccepted(true);
       peer.signal(signal);
@@ -79,11 +74,9 @@ function App() {
     connectionRef.current = peer;
   };
 
-  // B. Answer Connection (Someone called me)
+  // --- Answer Call ---
   const answerCall = () => {
     setCallAccepted(true);
-
-    // We are NOT the initiator
     const peer = new Peer({
       initiator: false,
       trickle: false
@@ -95,13 +88,30 @@ function App() {
 
     peer.on("connect", () => {
       setConnectionStatus("Connected P2P!");
-      console.log("P2P Channel Established!");
     });
 
-    // Process the signal we received from the caller
-    peer.signal(callerSignal);
+    // --- Listen for Data ---
+    peer.on("data", (data) => {
+      const str = new TextDecoder("utf-8").decode(data);
+      addMessage(str, "Partner");
+    });
 
+    peer.signal(callerSignal);
     connectionRef.current = peer;
+  };
+
+  // --- Send Message Function ---
+  const sendMessage = () => {
+    if (!msgText) return;
+
+    // 1. Send through P2P Wire
+    if (connectionRef.current) {
+      connectionRef.current.send(msgText);
+    }
+
+    // 2. Update Local UI
+    addMessage(msgText, "Me");
+    setMsgText("");
   };
 
   return (
@@ -109,39 +119,55 @@ function App() {
       <header className="App-header">
         <h1>Decentralized Messenger</h1>
 
-        {/* MY ID CARD */}
-        <div className="card">
-          <h3>My Connection ID</h3>
-          <p className="address-box">{me}</p>
-          <small>Share this with a friend to chat</small>
+        {/* Status Bar */}
+        <div style={{ padding: '10px', background: connectionStatus === "Connected P2P!" ? '#2e7d32' : '#333', width: '100%' }}>
+          Status: {connectionStatus} | My ID: {me}
         </div>
 
-        {/* CONNECTION STATUS */}
-        <div style={{ margin: '20px', color: connectionStatus === "Connected P2P!" ? '#4caf50' : 'orange' }}>
-          <strong>Status: {connectionStatus}</strong>
-        </div>
-
-        {/* INCOMING CALL NOTIFICATION */}
-        {receivingCall && !callAccepted ? (
-          <div className="card call-alert">
-            <h3>Incoming Connection...</h3>
-            <p>User {caller} wants to connect.</p>
-            <button onClick={answerCall}>Accept</button>
+        {/* --- Connection Setup --- */}
+        {!callAccepted && (
+          <div className="setup-container">
+            {receivingCall && !callAccepted ? (
+              <div className="card call-alert">
+                <h3>Incoming Connection...</h3>
+                <button onClick={answerCall}>Answer</button>
+              </div>
+            ) : (
+              <div className="card">
+                <input
+                  type="text"
+                  placeholder="Paste Friend's ID"
+                  value={idToCall}
+                  onChange={(e) => setIdToCall(e.target.value)}
+                />
+                <button onClick={() => callUser(idToCall)}>Connect</button>
+              </div>
+            )}
           </div>
-        ) : null}
+        )}
 
-        {/* CALL INTERFACE */}
-        {!callAccepted ? (
-          <div className="card">
-            <input
-              type="text"
-              placeholder="Paste Friend's ID"
-              value={idToCall}
-              onChange={(e) => setIdToCall(e.target.value)}
-            />
-            <button onClick={() => callUser(idToCall)}>Connect</button>
+        {/* --- The Chat Room --- */}
+        {callAccepted && (
+          <div className="chat-container">
+            <div className="messages-list">
+              {messages.map((msg, index) => (
+                <div key={index} className={`message-bubble ${msg.sender === "Me" ? "mine" : "theirs"}`}>
+                  <strong>{msg.sender}:</strong> {msg.text}
+                </div>
+              ))}
+            </div>
+
+            <div className="input-area">
+              <input
+                value={msgText}
+                onChange={(e) => setMsgText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+                placeholder="Type a message..."
+              />
+              <button onClick={sendMessage}>Send</button>
+            </div>
           </div>
-        ) : null}
+        )}
 
       </header>
     </div>

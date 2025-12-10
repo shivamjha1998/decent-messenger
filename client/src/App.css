@@ -25,3 +25,68 @@
   letter-spacing: 2px;
   color: #61dafb;
 }
+
+.setup-container {
+  margin-top: 50px;
+}
+
+.chat-container {
+  width: 90%;
+  max-width: 600px;
+  background: #1e1e1e;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  height: 60vh;
+}
+
+.messages-list {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.message-bubble {
+  padding: 10px 15px;
+  margin: 5px;
+  border-radius: 20px;
+  max-width: 70%;
+  text-align: left;
+}
+
+.message-bubble.mine {
+  background-color: #0084ff;
+  align-self: flex-end;
+}
+
+.message-bubble.theirs {
+  background-color: #3e4042;
+  align-self: flex-start;
+}
+
+.input-area {
+  display: flex;
+  padding: 10px;
+  background: #2c2f33;
+}
+
+.input-area input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 20px;
+  border: none;
+  margin-right: 10px;
+}
+
+.input-area button {
+  padding: 10px 20px;
+  border-radius: 20px;
+  border: none;
+  background: #0084ff;
+  color: white;
+  cursor: pointer;
+}
