@@ -90,3 +90,41 @@
   color: white;
   cursor: pointer;
 }
+
+/* --- Mobile Specific Tweaks --- */
+
+@media (max-width: 768px) {
+  .App {
+    /* On mobile, justify-content center can sometimes cut off top content if height is small */
+    justify-content: flex-start;
+    padding-top: 20px;
+  }
+
+  .address-box {
+    font-size: 1.1em;
+    /* Smaller font for mobile screens */
+    letter-spacing: 1px;
+  }
+
+  .chat-container {
+    width: 95%;
+    /* Take up more width on phones */
+    height: 75vh;
+    /* Take up more height on phones */
+    margin-bottom: 10px;
+  }
+
+  .card {
+    padding: 15px;
+  }
+
+  .input-area {
+    padding: 8px;
+  }
+
+  .message-bubble {
+    max-width: 85%;
+    /* Let messages take more width */
+    font-size: 0.95rem;
+  }
+}
